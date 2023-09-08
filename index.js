@@ -1,5 +1,5 @@
 import express from 'express';
-import dotenv from 'dotenv/config';
+import dotenv from 'dotenv';
 import mongoDBConnect from './mongoDB/connection.js';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
@@ -8,6 +8,12 @@ import userRoutes from './routes/user.js';
 import chatRoutes from './routes/chat.js';
 import messageRoutes from './routes/message.js';
 import * as Server from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const corsConfig = {
@@ -21,16 +27,19 @@ app.use(cors(corsConfig));
 app.use('/', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/message', messageRoutes);
+app.use(express.static(path.join(__dirname, './clients/build')))
+app.use('*', function (req, res) {
+  res.sendFile(path.join(__dirname, "./clients/build/index.html"));
+})
 mongoose.set('strictQuery', false);
 mongoDBConnect();
-const server = http.createServer(app); // Create an HTTP server instance
-server.listen(process.env.PORT, () => {
+const server = app.listen(process.env.PORT, () => {
   console.log(`Server Listening at PORT - ${process.env.PORT}`);
 });
-// Initialize Socket.io
-const io = new Server(server, {
+const io = new Server.Server(server, {
+  pingTimeout: 60000,
   cors: {
-    origin: 'http://localhost:3000', // Add your frontend origin here
+    origin: 'http://localhost:3000',
   },
 });
 // Create a map to store online users
